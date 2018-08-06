@@ -98,4 +98,6 @@ type Methods map[string]*method
 // one-hot struct, i.e. only Asset or Vehicle should be specified, but not both.
 type Union struct{}
 
+type Interface struct{}
+
 var unionType = reflect.TypeOf(Union{})

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"sync"
 	"testing"
@@ -32,6 +33,64 @@ type Args struct {
 
 type Item struct {
 	Id int64
+}
+
+func TestInterface(t *testing.T) {
+	schema := schemabuilder.NewSchema()
+
+	type A struct {
+		Name    string
+		Id      int64
+		UniqueA int64
+	}
+
+	type B struct {
+		Name    string
+		Id      int64
+		UniqueB int64
+	}
+
+	type InterfaceType struct {
+		schemabuilder.Interface
+		*A
+		*B
+	}
+	type Inner struct {
+	}
+
+	query := schema.Query()
+	query.FieldFunc("inner", func() Inner {
+		return Inner{}
+	})
+
+	inner := schema.Object("inner", Inner{})
+	inner.FieldFunc("interfaceType", func() []*InterfaceType {
+		retList := make([]*InterfaceType, 2)
+		retList[0] = &InterfaceType{A: &A{Name: "alpha", UniqueA: int64(2)}}
+		retList[1] = &InterfaceType{B: &B{Name: "beta", UniqueB: int64(3)}}
+		return retList
+	})
+
+	builtSchema := schema.MustBuild()
+	q := graphql.MustParse(`
+		{
+			inner {	
+				interfaceType {
+					name
+					... on A { uniqueA }
+					... on B { uniqueB }
+				}
+			}
+	    }`, nil)
+
+	if err := graphql.PrepareQuery(builtSchema.Query, q.SelectionSet); err != nil {
+		t.Error(err)
+	}
+	e := graphql.Executor{}
+	val, err := e.Execute(context.Background(), builtSchema.Query, nil, q)
+	log.Println(val)
+	t.Error(err)
+
 }
 
 func TestConnection(t *testing.T) {

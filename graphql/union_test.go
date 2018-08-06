@@ -19,6 +19,52 @@ const (
 	GatewayType_Asset
 )
 
+func TestNestedUnion(t *testing.T) {
+	type Vehicle struct {
+		Name  string
+		Speed int64
+	}
+	type Asset struct {
+		Name         string
+		BatteryLevel int64
+	}
+
+	type Gateway struct {
+		schemabuilder.Union
+
+		*Vehicle
+		*Asset
+	}
+	type Inner struct{}
+	schema := schemabuilder.NewSchema()
+	query := schema.Query()
+	query.FieldFunc("inner", func() Inner {
+		return Inner{}
+	})
+
+	inner := schema.Object("inner", Inner{})
+
+	inner.FieldFunc("gateway", func() (*Gateway, error) {
+		return nil, nil
+	})
+	builtSchema := schema.MustBuild()
+
+	q := graphql.MustParse(`
+		{
+			inner {
+				gateway {
+					... on Asset { name batteryLevel } 
+					... on Vehicle { name speed }
+				}
+			}
+		}	
+	`, nil)
+
+	if err := graphql.PrepareQuery(builtSchema.Query, q.SelectionSet); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestUnionType(t *testing.T) {
 	type Vehicle struct {
 		Name  string
