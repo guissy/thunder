@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"runtime"
 	"strings"
@@ -333,7 +332,6 @@ func (e *Executor) executeUnion(ctx context.Context, typ *Union, source interfac
 }
 
 func (e *Executor) executeInterface(ctx context.Context, typ *Interface, source interface{}, selectionSet *SelectionSet) (interface{}, error) {
-	log.Println("welcx")
 	value := reflect.ValueOf(source)
 	if value.Kind() == reflect.Ptr && value.IsNil() {
 		return nil, nil
@@ -347,12 +345,10 @@ func (e *Executor) executeInterface(ctx context.Context, typ *Interface, source 
 		}
 		inner = inner.FieldByName(typString)
 		if inner.IsNil() {
-			log.Println(typString, "isnil")
 			continue
 		}
 		possibleTypes = append(possibleTypes, graphqlTyp.String())
 		selections := Flatten(selectionSet)
-		fields := make(map[string]interface{})
 		// for every selection, resolve the value and store it in the output object
 		for _, selection := range selections {
 			if selection.Name == "__typename" {
@@ -363,7 +359,9 @@ func (e *Executor) executeInterface(ctx context.Context, typ *Interface, source 
 			if !ok {
 				continue
 			}
-			resolved, err := e.resolveAndExecute(ctx, field, source, selection)
+			value := reflect.ValueOf(source).Elem()
+			value = value.FieldByName(typString)
+			resolved, err := e.resolveAndExecute(ctx, field, value.Interface(), selection)
 			if err != nil {
 				return nil, nestPathError(selection.Alias, err)
 			}

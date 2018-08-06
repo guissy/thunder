@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"sync"
 	"testing"
@@ -66,8 +65,8 @@ func TestInterface(t *testing.T) {
 	inner := schema.Object("inner", Inner{})
 	inner.FieldFunc("interfaceType", func() []*InterfaceType {
 		retList := make([]*InterfaceType, 2)
-		retList[0] = &InterfaceType{A: &A{Name: "alpha", UniqueA: int64(2)}}
-		retList[1] = &InterfaceType{B: &B{Name: "beta", UniqueB: int64(3)}}
+		retList[0] = &InterfaceType{A: &A{Name: "a", Id: 1, UniqueA: int64(2)}}
+		retList[1] = &InterfaceType{B: &B{Name: "b", Id: 2, UniqueB: int64(3)}}
 		return retList
 	})
 
@@ -77,6 +76,7 @@ func TestInterface(t *testing.T) {
 			inner {	
 				interfaceType {
 					name
+					id
 					... on A { uniqueA }
 					... on B { uniqueB }
 				}
@@ -88,7 +88,13 @@ func TestInterface(t *testing.T) {
 	}
 	e := graphql.Executor{}
 	val, err := e.Execute(context.Background(), builtSchema.Query, nil, q)
-	log.Println(val)
+
+	assert.Equal(t, map[string]interface{}{
+		"inner": map[string]interface{}{
+			"interfaceType": map[string]interface{}{},
+		},
+	}, val)
+
 	t.Error(err)
 
 }
